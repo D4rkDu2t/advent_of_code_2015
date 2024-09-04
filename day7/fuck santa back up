@@ -1,0 +1,99 @@
+use Bitwise
+
+defmodule Santas_wires do
+        def santa_and_his_stupid_unlabeled_wires(operations, variables) do
+                calculated_variables = Enum.reduce(operations, {operations, variables}, fn [operation, var1_num, var2_num, output_var], {acc_ops, acc_vars} ->
+                        case operation do
+                          "ASSIGN" ->
+                                {acc_ops, assign_op(acc_vars, var1_num, output_var)}
+                          "AND" ->
+                                IO.inspect(var1_num)
+                                {acc_ops, and_op(acc_vars, var1_num, var2_num, output_var)}
+                          "OR" ->
+                                {acc_ops, or_op(acc_vars, var1_num, var2_num, output_var)}
+                          "NOT" ->
+                                {acc_ops, not_op(acc_vars, var1_num, output_var)}
+                          "LSHIFT" ->
+                                {acc_ops, lshift_op(acc_vars, var1_num, var2_num, output_var)}
+                          "RSHIFT" ->
+                                {acc_ops, rshift_op(acc_vars, var1_num, var2_num, output_var)}
+                          true ->
+                                {acc_ops, acc_vars}
+                        end
+                      end)
+
+                elem(calculated_variables, 1)
+        end
+
+        def assign_op(variables, value, output_var) do
+                value = String.to_integer(value)
+                        # |> Integer.to_string(2)
+
+                Map.put(variables, output_var, value)
+        end
+
+        def and_op(variables, var1, var2, output_var) do
+                value1 = Map.get(variables, var1)
+                value2 = Map.get(variables, var2)
+
+                Map.put(variables, output_var, value2 &&& value1)
+        end
+
+        def or_op(variables, var1, var2, output_var) do
+                value1 = Map.get(variables, var1)
+                value2 = Map.get(variables, var2)
+
+                Map.put(variables, output_var, value1 ||| value2)
+        end
+
+        def not_op(variables, var1, output_var) do
+                value = Map.get(variables, var1)
+                |> Integer.to_string(2)
+                |> String.replace(~r/[0]/, "2")
+                |> String.replace(~r/[1]/, "0")
+                |> String.replace(~r/[2]/, "1")
+
+                Map.put(variables, output_var, value)
+        end
+
+        def lshift_op(variables, var1, num, output_var) do
+                value1 = Map.get(variables, var1)
+                Map.put(variables, output_var, value1 <<< num)
+        end
+
+        def rshift_op(variables, var1, num, output_var) do
+                value1 = Map.get(variables, var1)
+                Map.put(variables, output_var, value1 >>> num)
+        end
+end
+
+input = File.read!("input.txt")
+|> String.trim()
+|> String.split(~r/\n/)
+
+regex_variables = ~r/(?<=-> ).*/
+
+variables = Enum.map(input, fn line ->
+                Regex.run(regex_variables, line)
+        end)
+        |> Enum.map(fn [match] -> match end)
+        |> Enum.uniq()
+        |> Map.new(fn var -> {var, nil} end)
+
+operations = Enum.map(input, fn line ->
+                Regex.split(~r/( )/, line)
+        end)
+        |> Enum.map(fn
+                [var1, "RSHIFT", num, "->", output_var] -> ["RSHIFT", var1, String.to_integer(num), output_var]
+                [var1, "LSHIFT", num, "->", output_var] -> ["LSHIFT", var1, String.to_integer(num), output_var]
+                [var1, "AND", var2, "->", output_var] -> ["AND", var1, var2, output_var]
+                [var1, "OR", var2, "->", output_var] -> ["OR", var1, var2, output_var]
+                ["NOT", var1, "->", output_var] -> ["NOT", var1, nil, output_var]
+                [var1, "->", output_var] -> ["ASSIGN", var1, nil, output_var]
+        end)
+
+IO.inspect(variables)
+IO.inspect(operations)
+
+Santas_wires.santa_and_his_stupid_unlabeled_wires(operations, variables)
+|> IO.inspect()
